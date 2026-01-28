@@ -65,13 +65,13 @@ func SubscribeJSON[T any](
 			switch handler(target) {
 			case Ack:
 				msg.Ack(false)
-				fmt.Println("Ack")
+				//fmt.Println("Ack")
 			case NackDiscard:
 				msg.Nack(false, false)
-				fmt.Println("NackDiscard")
+				//fmt.Println("NackDiscard")
 			case NackRequeue:
 				msg.Nack(false, true)
-				fmt.Println("NackRequeue")
+				//fmt.Println("NackRequeue")
 			}
 		}
 	}()
@@ -90,13 +90,16 @@ func DeclareAndBind(
 		return nil, amqp.Queue{}, fmt.Errorf("could not create channel: %v", err)
 	}
 
+	table := map[string]any{
+		"x-dead-letter-exchange": "peril_dlx",
+	}
 	queue, err := ch.QueueDeclare(
 		queueName,                       // name
 		queueType == SimpleQueueDurable, // durable
 		queueType != SimpleQueueDurable, // delete when unused
 		queueType != SimpleQueueDurable, // exclusive
 		false,                           // no-wait
-		nil,                             // args
+		table,                           // args
 	)
 	if err != nil {
 		return nil, amqp.Queue{}, fmt.Errorf("could not declare queue: %v", err)
