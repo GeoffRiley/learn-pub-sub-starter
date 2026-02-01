@@ -25,17 +25,28 @@ func main() {
 		log.Fatalf("could not create channel: %v", err)
 	}
 
-	_, queue, err := pubsub.DeclareAndBind(
+	err = pubsub.SubscribeGob(
 		conn,
 		routing.ExchangePerilTopic,
 		routing.GameLogSlug,
 		routing.GameLogSlug+".*",
 		pubsub.SimpleQueueDurable,
+		handlerLog(),
 	)
 	if err != nil {
-		log.Fatalf("could not subscribe to pause: %v", err)
+		log.Fatalf("could not starting consuming logs: %v", err)
 	}
-	fmt.Printf("Queue %v declared and bound!\n", queue.Name)
+	//_, queue, err := pubsub.DeclareAndBind(
+	//	conn,
+	//	routing.ExchangePerilTopic,
+	//	routing.GameLogSlug,
+	//	routing.GameLogSlug+".*",
+	//	pubsub.SimpleQueueDurable,
+	//)
+	//if err != nil {
+	//	log.Fatalf("could not subscribe to pause: %v", err)
+	//}
+	//fmt.Printf("Queue %v declared and bound!\n", queue.Name)
 
 	gamelogic.PrintServerHelp()
 
@@ -77,5 +88,17 @@ func main() {
 		default:
 			fmt.Println("unknown command")
 		}
+	}
+}
+
+func handlerLog() func(gamelog routing.GameLog) pubsub.Acktype {
+	return func(gamelog routing.GameLog) pubsub.Acktype {
+		defer fmt.Println("> ")
+		err := gamelogic.WriteLog(gamelog)
+		if err != nil {
+			fmt.Println("WriteLog error:", err)
+			return pubsub.NackRequeue
+		}
+		return pubsub.Ack
 	}
 }
